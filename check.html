@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+<button id="fetch-current-year-data-btn">取得今年資料</button>
+<ul id="holiday-year"></ul>
+
+<script>
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1; // 月份從0開始，所以要加1
+
+  // 如果當前月份是6月或之後，則顯示「取得明年資料」的按鈕
+  if (currentMonth > 6) {
+    const nextYearButton = document.createElement('button');
+    nextYearButton.id = 'fetch-next-year-data-btn';
+    nextYearButton.textContent = '取得明年資料';
+    document.body.insertBefore(nextYearButton, document.getElementById('holiday-year'));
+
+    nextYearButton.addEventListener('click', () => {
+      fetchData(currentYear + 1);
+    });
+  }
+
+  document.getElementById('fetch-current-year-data-btn').addEventListener('click', () => {
+    fetchData(currentYear);
+  });
+
+  function fetchData(year) {
+    const TaiwanCalendarAPI = `https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/${year}.json`;
+
+    fetch(TaiwanCalendarAPI)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(jsonData => {
+        const holidayData = jsonData.filter(item => 
+          item.isHoliday === true && item.description.length >= 1
+        );
+        const workdayData = jsonData.filter(item => 
+          ['六', '日'].includes(item.week) && item.isHoliday === false
+        );
+
+        renderData(holidayData, workdayData);
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+      });
+  }
+
+  function renderData(holidayData, workdayData) {
+    const holidayLines = holidayData.map(item => `${item.date}，星期${item.week}：放假。 (${item.description})`);
+    const workdayLines = workdayData.map(item => `${item.date}，星期${item.week}：補上班。 (${item.description})`);
+
+    const ul = document.getElementById('holiday-year');
+    ul.innerHTML = ''; // 清空現有內容
+
+    holidayLines.forEach((line, index) => {
+      const li = document.createElement('li');
+      li.innerHTML = line; // 使用 innerHTML 確保特殊字符不被轉換
+      if (['六', '日'].includes(holidayData[index].week)) {
+        li.style.opacity = '0.4';
+      }
+      ul.appendChild(li);
+    });
+
+    workdayLines.forEach(line => {
+      const li = document.createElement('li');
+      li.innerHTML = line; // 使用 innerHTML 確保特殊字符不被轉換
+      li.style.color = '#fa1111'; // 設定文字顏色為紅色
+      ul.appendChild(li);
+    });
+  }
+</script>
+</body>
+</html>
