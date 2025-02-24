@@ -1,0 +1,267 @@
+{
+  "name": "RSS 嘗試",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        60
+      ],
+      "id": "61a088f5-56e7-422a-a774-3da6ccc4b24a",
+      "name": "When clicking ‘Test workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://www.searchenginejournal.com/category/news/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -420,
+        60
+      ],
+      "id": "b939583a-b395-4d7b-9d94-4be661114446",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "title",
+              "cssSelector": "article h2.h4>a",
+              "returnArray": true
+            },
+            {
+              "key": "link",
+              "cssSelector": "article h2.h4>a",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true
+        }
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        -200,
+        60
+      ],
+      "id": "a444c4d5-1055-4cba-9a3e-60655fc53188",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputDataTitle = $input.first().json.title;\nconst inputDatalink = $input.first().json.link;\n\nlet items = inputDataTitle.map((title, index) => ({\n  title,\n  link: inputDatalink[index]\n}));\n\nlet emailText = \"<p>最新文章列表：</p><br />\";\n\nfor (let item of items) {\n  let title = item.title || \"無標題\";\n  let link = item.link || \"#\";\n  emailText += `<div><p>🔹 ${title}</p><a href=\"${link}\" target=\"_blank\">${link}</a></div>\\n`;\n}\n\nreturn [{ json: { news: emailText } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        60
+      ],
+      "id": "c8c958e0-504b-406d-9572-f80b610e64f2",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "sendTo": "2012cjz@gmail.com",
+        "subject": "SEJ 最新消息",
+        "message": "={{ $input.first().json.text }}{{ $input.last().json.news }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        60
+      ],
+      "id": "2af5ea8f-aebb-4704-a856-28371c2bc43a",
+      "name": "Gmail",
+      "webhookId": "51ac5685-b779-45d7-8157-a130998257b1",
+      "notesInFlow": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xPKKFRXgrgv9rf1V",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=你是一名B2B的行銷人員，從下面的這些新聞中，該注意什麼趨勢，用繁體中文告訴我，並使用「<br />」當成換行字元（不要用「\\n」）：\n{{ $json.allTitle }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        160,
+        220
+      ],
+      "id": "26a24829-c90a-48a0-bb91-823d60a72e6f",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        220,
+        380
+      ],
+      "id": "a810aa98-5da1-40c8-9410-c3ad059e5dad",
+      "name": "Google Gemini Chat Model",
+      "notesInFlow": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "DaXjKfRFPdEl48O9",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "notes": "幫我從這此字中觀察出SEO趨勢，且用100個繁體中文字以內告訴我。"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allTitle = $input.first().json.title;\n\nreturn [{ json: { allTitle } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        220
+      ],
+      "id": "04cdfaa9-d502-4784-a267-2240a4af7b10",
+      "name": "Code2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        480,
+        60
+      ],
+      "id": "70319cb5-beaa-4ceb-bd50-4b3e844e0350",
+      "name": "Merge"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "79ecd16a-7185-47b1-8b99-7dc14187cccf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a297a5afa079591faba299aa30a327132c480c60a73355ed8857543a0d5ed5f"
+  },
+  "id": "N2SUjjSNactBFGW3",
+  "tags": []
+}
